@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Keep the Gulf Open</title>
+  <link rel="stylesheet" href="css/game.css">
+</head>
+<body>
+  <div id="app">
+    <header class="top">
+      <div class="brand">
+        <h1>Keep the Gulf Open</h1>
+        <p class="case">US Navy. Keep tanker traffic moving through the Strait of Hormuz.</p>
+      </div>
+      <div class="clock" aria-live="polite">
+        <span id="day-label">Day 1</span>
+        <span class="watch" id="watch-label">Morning watch</span>
+      </div>
+      <div class="speeds" role="group" aria-label="Clock">
+        <button type="button" id="btn-pause" class="is-on">Pause</button>
+        <button type="button" id="btn-1x">1×</button>
+        <button type="button" id="btn-2x">2×</button>
+      </div>
+    </header>
+
+    <div class="status" id="status-line">
+      <span id="stat-queue">Queue 6 / 12</span>
+      <span id="stat-risk">Lane Contested</span>
+      <span id="stat-odds">Next transit 64%</span>
+      <span id="stat-streak">Open streak 0 / 8</span>
+      <span id="stat-budget">Budget 48</span>
+      <span id="stat-units">4 units ready</span>
+    </div>
+
+    <div class="actions" id="action-bar">
+      <p class="hint" id="action-hint">Select a unit, then a job.</p>
+      <div class="action-btns">
+        <button type="button" data-action="escort" disabled>Escort</button>
+        <button type="button" data-action="sweep" disabled>Sweep</button>
+        <button type="button" data-action="strike" disabled>Strike nest</button>
+        <button type="button" data-action="hold" disabled>Hold station</button>
+        <button type="button" data-action="relocate" disabled>Relocate</button>
+      </div>
+    </div>
+
+    <main>
+      <section class="chart-wrap" aria-label="Gulf map">
+        <svg class="chart" viewBox="0 0 1000 640" role="img">
+          <defs>
+            <linearGradient id="waterGrad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#3a7a86"/>
+              <stop offset="45%" stop-color="#2c5f6b"/>
+              <stop offset="100%" stop-color="#1d454f"/>
+            </linearGradient>
+            <linearGradient id="landN" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#d2b48a"/>
+              <stop offset="100%" stop-color="#b89464"/>
+            </linearGradient>
+            <linearGradient id="landS" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#e0c89a"/>
+              <stop offset="100%" stop-color="#c9ad78"/>
+            </linearGradient>
+            <pattern id="wave" width="28" height="16" patternUnits="userSpaceOnUse">
+              <path d="M0 10 C7 4 14 4 21 10" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="1.2"/>
+            </pattern>
+            <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="1" stdDeviation="1.2" flood-color="#1a120c" flood-opacity="0.35"/>
+            </filter>
+          </defs>
+
+          <rect class="sea" x="0" y="0" width="1000" height="640" fill="url(#waterGrad)"/>
+          <rect x="0" y="0" width="1000" height="640" fill="url(#wave)"/>
+
+          <g class="lanes" aria-hidden="true">
+            <path id="lane-inbound-path" class="lane-line inbound" d="M 860 455 C 760 400 700 355 640 330 C 560 300 470 295 360 310 C 250 328 160 350 70 340"/>
+            <path id="lane-outbound-path" class="lane-line outbound" d="M 80 375 C 180 395 270 370 380 348 C 490 325 580 328 655 360 C 720 388 790 430 890 490"/>
+          </g>
+
+          <path class="land north" filter="url(#soft)" fill="url(#landN)" d="M0,0 H1000 V148
+            L955,160 910,142 868,168 820,150 780,176
+            L742,158 700,184 668,162 628,192 590,170
+            L548,198 500,176 458,208 400,186 348,214
+            L292,190 230,218 168,196 108,222 52,200
+            L0,218 Z"/>
+
+          <path class="land island" filter="url(#soft)" fill="url(#landN)" d="M605,206
+            C628,192 710,188 778,204
+            C802,212 804,232 776,242
+            C720,256 640,252 608,234
+            C592,224 592,212 605,206 Z"/>
+
+          <path class="land south" filter="url(#soft)" fill="url(#landS)" d="M0,640 H1000 V508
+            L948,520 888,498 828,528 776,508
+            L730,538 698,500 678,438
+            L662,378 678,328 648,302
+            L608,318 592,368 602,428
+            L582,488 528,508 468,490
+            L400,518 328,498 250,524
+            L178,506 110,532 52,514
+            L0,528 Z"/>
+
+          <g class="place-labels" aria-hidden="true">
+            <text x="168" y="72">Persian Gulf</text>
+            <text x="820" y="72">Iranian coast</text>
+            <text x="688" y="132" class="spot">Bandar Abbas</text>
+            <text x="690" y="228" class="quiet">Qeshm</text>
+            <text x="488" y="268" class="spot strait">Strait of Hormuz</text>
+            <text x="618" y="458" class="spot">Musandam</text>
+            <text x="160" y="560">UAE / Oman water</text>
+            <text x="820" y="575">Gulf of Oman</text>
+            <text x="848" y="400" class="spot hold">Tanker holding</text>
+          </g>
+
+          <g id="job-layer"></g>
+          <g id="threat-layer"></g>
+          <g id="tanker-layer"></g>
+          <g id="transit-layer"></g>
+          <g id="unit-layer"></g>
+          <g id="fx-layer"></g>
+        </svg>
+      </section>
+
+      <aside class="side">
+        <div class="roster" id="roster"></div>
+        <div class="log-panel">
+          <h2>Log</h2>
+          <ol id="log" reversed></ol>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <div id="end-card" class="end-card" hidden>
+    <div class="end-inner">
+      <p class="end-kicker" id="end-kicker">Result</p>
+      <h2 id="end-title">The gulf is closed</h2>
+      <p id="end-reason"></p>
+      <button type="button" id="btn-again">Play again</button>
+    </div>
+  </div>
+
+  <script src="js/game.js"></script>
+</body>
+</html>
