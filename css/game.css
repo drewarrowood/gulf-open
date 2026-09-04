@@ -324,6 +324,12 @@ main {
   cursor: pointer;
 }
 
+.nest-hit {
+  fill: transparent;
+  stroke: none;
+  pointer-events: all;
+}
+
 .nest .mark {
   fill: #9c3418;
   stroke: #241910;

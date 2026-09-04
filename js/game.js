@@ -25,12 +25,14 @@
   ];
 
   const JOB_SHAPES = [
-    { id: "holding", actionHint: "escort", label: "ESCORT / HOLD", x: 790, y: 405, w: 175, h: 95 },
+    { id: "holding", actionHint: "escort", label: "HOLDING", x: 790, y: 405, w: 175, h: 95 },
     { id: "inbound", actionHint: "sweep", label: "INBOUND LANE", x: 520, y: 268, w: 210, h: 70 },
     { id: "outbound", actionHint: "sweep", label: "OUTBOUND LANE", x: 610, y: 348, w: 200, h: 62 },
     { id: "strait", actionHint: "hold", label: "STRAIT STATION", x: 430, y: 278, w: 85, h: 58 },
     { id: "safer", actionHint: "relocate", label: "SAFER WATER", x: 70, y: 430, w: 230, h: 95 },
     { id: "gulf", actionHint: "relocate", label: "GULF APPROACH", x: 40, y: 250, w: 200, h: 80 },
+    { id: "abbas", actionHint: "strike", label: "BANDAR ABBAS NEST", x: 630, y: 86, w: 186, h: 78 },
+    { id: "west", actionHint: "strike", label: "WEST BLUFF NEST", x: 348, y: 100, w: 168, h: 70 },
   ];
 
   const $ = (id) => document.getElementById(id);
@@ -122,9 +124,10 @@
   function canUnitDo(unit, action) {
     if (!unit || state.over) return false;
     if (unit.busy > 0 && action !== "relocate") return false;
+    if (unit.busy === 99) return false;
     if (action === "escort") return unit.kind === "escort" || unit.kind === "frigate";
     if (action === "sweep") return unit.kind === "mcm";
-    if (action === "strike") return unit.kind === "carrier" && unit.cooldown <= 0;
+    if (action === "strike") return unit.kind === "carrier" && unit.cooldown <= 0 && unit.hits < unit.maxHits;
     if (action === "hold" || action === "relocate") return true;
     return false;
   }
@@ -417,11 +420,13 @@
     const layer = $("job-layer");
     layer.replaceChildren();
     const unit = unitById(state.selected);
+    if (!unit) return;
     for (const job of JOB_SHAPES) {
-      const action = unit ? inferAction(unit, job.id) : null;
-      const g = svgEl("g", { class: `job-wrap${action ? " has-job" : ""}` });
+      const action = inferAction(unit, job.id);
+      if (!action) continue;
+      const g = svgEl("g", { class: "job-wrap has-job" });
       const r = svgEl("rect", {
-        class: `job${action ? " is-valid" : ""}`,
+        class: `job is-valid${action === "strike" ? " is-hot" : ""}`,
         x: job.x,
         y: job.y,
         width: job.w,
@@ -434,11 +439,11 @@
         onJobClick(job.id);
       });
       const label = svgEl("text", {
-        class: `job-label${action ? "" : " dim"}`,
+        class: "job-label",
         x: job.x + 10,
         y: job.y + 18,
       });
-      label.textContent = action ? action.toUpperCase() + " · " + job.label : job.label;
+      label.textContent = action.toUpperCase() + " · " + job.label;
       g.append(r, label);
       layer.append(g);
     }
@@ -463,13 +468,20 @@
       const unit = unitById(state.selected);
       const valid = unit && inferAction(unit, nest.id) === "strike";
       const g = svgEl("g", { class: `nest${nest.down > 0 ? " is-down" : ""}${valid ? " is-valid" : ""}`, "data-nest": nest.id });
+      const hit = svgEl("rect", {
+        class: "nest-hit",
+        x: nest.x - 28,
+        y: nest.y - 22,
+        width: 120,
+        height: 44,
+      });
       const mark = svgEl("polygon", {
         class: "mark",
-        points: `${nest.x},${nest.y - 10} ${nest.x + 11},${nest.y + 10} ${nest.x - 11},${nest.y + 10}`,
+        points: `${nest.x},${nest.y - 14} ${nest.x + 15},${nest.y + 12} ${nest.x - 15},${nest.y + 12}`,
       });
-      const cap = svgEl("text", { class: "nest-caption", x: nest.x + 14, y: nest.y + 4 });
+      const cap = svgEl("text", { class: "nest-caption", x: nest.x + 18, y: nest.y + 5 });
       cap.textContent = nest.down > 0 ? "NEST DOWN" : nest.active ? "NEST LIVE" : "NEST QUIET";
-      g.append(mark, cap);
+      g.append(hit, mark, cap);
       g.addEventListener("click", (ev) => {
         ev.stopPropagation();
         onJobClick(nest.id);
@@ -665,7 +677,10 @@
         if (!unit || !canUnitDo(unit, action)) return;
         pendingAction = action;
         if (action === "escort") issueOrder(unit, "escort", "holding");
-        else render();
+        else if (action === "strike") {
+          const nest = state.nests.find((n) => n.active && n.down <= 0) || state.nests[0];
+          issueOrder(unit, "strike", nest.id);
+        } else render();
       });
     });
     $("btn-pause").addEventListener("click", () => setSpeed(0));
