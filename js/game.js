@@ -102,14 +102,14 @@
   }
 
   function transitOdds() {
-    let risk = 0.16;
-    risk += minesInLane() * 0.11;
-    risk += activeSwarms() * 0.09;
-    risk += nestThreat() * 0.07;
+    let risk = 0.15;
+    risk += minesInLane() * 0.1;
+    risk += activeSwarms() * 0.08;
+    risk += nestThreat() * 0.065;
     const escortN = escortsCovering().length;
-    risk -= escortN * 0.13;
-    if (state.units.some((u) => u.kind === "mcm" && u.job && u.job.type === "sweep")) risk -= 0.05;
-    if (airCover()) risk -= 0.06;
+    risk -= escortN * 0.14;
+    if (state.units.some((u) => u.kind === "mcm" && u.job && u.job.type === "sweep")) risk -= 0.06;
+    if (airCover()) risk -= 0.07;
     const clear = Math.max(0.12, Math.min(0.94, 1 - risk));
     state.lastOdds = clear;
     return clear;
@@ -252,10 +252,10 @@
     if (cleared) log(cleared === 1 ? "Convoy clears the Strait." : `${cleared} groups clear the Strait.`);
     if (hit) log(hit === 1 ? "A tanker is hit. Queue lengthens. Budget burns." : `${hit} tankers are hit. Queue jumps. Budget burns.`);
 
-    if (Math.random() < 0.4) state.queue += 1;
-    if (state.queue > 16) state.queue = 16;
+    if (Math.random() < 0.32) state.queue += 1;
+    if (state.queue > QUEUE_FAIL) state.queue = QUEUE_FAIL;
 
-    const open = odds >= 0.72 && cleared > 0 && hit === 0;
+    const open = odds >= 0.7 && hit === 0 && (cleared > 0 || state.queue <= 3);
     state.streak = open ? state.streak + 1 : 0;
     if (open && state.streak >= 3) log(`Lane has stayed open ${state.streak} watches.`);
   }
@@ -265,7 +265,7 @@
     const late = state.day >= 12;
     const pressure = (odds > 0.7 ? 1.25 : 0.85) + (late ? 0.2 : 0);
 
-    if (state.mines.filter((m) => m.sector === "inbound").length < 4 && Math.random() < 0.22 * pressure) {
+    if (state.mines.filter((m) => m.sector === "inbound").length < 4 && Math.random() < 0.18 * pressure) {
       state.mines.push({ sector: "inbound", x: 560 + Math.random() * 140, y: 290 + Math.random() * 40 });
       log("Minefield laid on the inbound lane.");
     }
@@ -297,7 +297,7 @@
     for (const nest of state.nests) {
       if (nest.down > 0) {
         nest.down -= 1;
-        if (nest.down === 0 && Math.random() < 0.55) {
+        if (nest.down === 0 && Math.random() < 0.4) {
           nest.active = true;
           log(`${nest.name} is back up.`);
         }
@@ -703,4 +703,13 @@
 
   bind();
   start();
+
+  window.__gulf = {
+    state: () => state,
+    tick,
+    setSpeed,
+    order(id, action, target) {
+      issueOrder(unitById(id), action, target);
+    },
+  };
 })();
