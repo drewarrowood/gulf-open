@@ -245,7 +245,7 @@
       } else {
         hit += 1;
         state.queue += 1;
-        state.budget -= 2;
+        state.budget = Math.max(0, state.budget - 2);
         state.transits.push({ t: 0, ok: false });
       }
     }
@@ -374,7 +374,7 @@
     if (state.over) return;
     resolveTransits();
     spawnThreats();
-    state.budget -= 1;
+    state.budget = Math.max(0, state.budget - 1);
     for (const t of state.transits) t.t += 1;
     state.transits = state.transits.filter((t) => t.t < 8);
     checkEnd();
